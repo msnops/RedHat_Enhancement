@@ -1,0 +1,8 @@
+---
+- name: testing windows
+  hosts: PAM_RDS
+  tasks:
+    - name: Touch a file (creates if not present, updates modification time if present)
+      win_file:
+        path: C:\Users\user1\Desktop\test_anstwr_file.txt
+        state: touch

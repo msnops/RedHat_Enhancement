@@ -1,0 +1,11 @@
+---
+- name: testing merging files
+  hosts: xvat_test_app
+  tasks:
+    - name: merge 2 files
+      blockinfile:
+        insertafter: EOF
+        path: /etc/profile.d/oracle-grid.sh
+        block: "{{ lookup('template', './files/test1.j2') }}"
+        create: yes
+        

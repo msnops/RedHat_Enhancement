@@ -1,0 +1,27 @@
+---
+- name: check the provided IP and HostName not duplicated
+  hosts: localhost
+  connection: local
+
+  tasks:
+
+    - name: Test unreachability to provided IP using default vrf
+      shell: 'ping {{ item }} -c 5 | grep "100% packet loss"| wc -l'
+      with_items:
+        - "{{ vm_ip }}"
+      register: ping_response
+    - name:
+      debug:
+        var: ping_response.stdout
+    - name: Check all port numbers are accessible from the current host
+      wait_for:
+        host: "{{ vm_ip }}"
+        port: "{{ item }}"
+        state: absent         # Port should be open
+        delay: 0               # No wait before first check (sec)
+        timeout: 3             # Stop checking after timeout (sec)
+      with_items:
+        - "{{ 22 }}"
+        - "{{ 389 }}"
+        - "{{ 443 }}"
+        - "{{ 80 }}"

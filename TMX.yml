@@ -1,0 +1,21 @@
+---
+- hosts: all
+  tasks:
+  - name: Create a tmxbc folder under /opt
+    file:
+      path: "/opt/tmxbc"
+      state: directory
+      mode: "u=rwx,g=rwx"
+  - name: copy the source tar file to remote location
+    unarchive:
+      src: /tmp/tmxbc_linux64.tgz
+      dest: /opt/tmxbc
+      mode: 0755
+  - name: Install the TMXBC 
+    shell:
+      cmd: ./tmxbc install
+      chdir: /opt/tmxbc
+  - name: check the tmxbc installation is done and application running
+    shell:  ps -eaf | grep tmxbc | grep -v grep | wc -l
+    register: command_result
+    failed_when: command_result.stdout|int != 1

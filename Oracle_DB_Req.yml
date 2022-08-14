@@ -1,0 +1,354 @@
+---
+  - name: Add Group oinstall if not available 
+    group:
+      name: oinstall
+      state: present
+      gid: 501
+  - name: Add Group dba if not available 
+    group:
+      name: dba
+      state: present
+      gid: 502
+  - name: Add Group asmdba if not available 
+    group:
+      name: asmdba
+      state: present
+      gid: 503
+  - name: Add Group asmoper if not available 
+    group:
+      name: asmoper
+      state: present
+      gid: 504
+  - name: Add Group asmadmin if not available 
+    group:
+      name: asmadmin
+      state: present
+      gid: 505
+  - name: Add Group oper if not available 
+    group:
+      name: oper
+      state: present
+      gid: 506
+  - name: Add Group backupdba if not available 
+    group:
+      name: backupdba
+      state: present
+      gid: 507
+  - name: Add Group dgdba if not available 
+    group:
+      name: dgdba
+      state: present
+      gid: 508
+  - name: Add Group kmdba if not available 
+    group:
+      name: kmdba
+      state: present
+      gid: 509
+
+  - name: Create user grid and add to required groups
+    user:
+      name: "{{ item.user1}}"
+      comment: "Grid User"
+      uid: 501
+      group: oinstall
+      groups: dba,asmdba,asmadmin,asmoper
+      append: yes
+      password: "{{item.password1}}"
+  - name: Create user Oracle and add to required groups
+    user:
+      name: "{{ item.user2}}"
+      comment: "Oracle User"
+      uid: 500
+      group: oinstall
+      groups: dba,oper,asmdba,asmoper,backupdba,dgdba,kmdba
+      append: yes
+      password: "{{item.password2}}"
+  - name: Set some kernel parameters required for Oracle DB
+    lineinfile:
+      dest: /etc/sysctl.conf
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+    loop:
+      - { regexp: '^kernel.shmall', line: 'kernel.shmall = 1073741824' }
+      - { regexp: '^kernel.shmmni', line: 'kernel.shmmni = 4096' }
+      - { regexp: '^kernel.shmmax', line: 'kernel.shmmax = 4398046511104' }
+      - { regexp: '^fs.file-max', line: 'fs.file-max = 6815744' }
+      - { regexp: '^fnet.ipv4.ip_forward', line: 'net.ipv4.ip_forward = 0' }
+      - { regexp: '^net.ipv4.conf.default.rp_filter', line: 'net.ipv4.conf.default.rp_filter = 1' }
+      - { regexp: '^net.ipv4.conf.default.accept_source_route', line: 'net.ipv4.conf.default.accept_source_route = 0' }
+      - { regexp: '^kernel.sysrq', line: 'kernel.sysrq = 0' }
+      - { regexp: '^kernel.core_uses_pid', line: 'kernel.core_uses_pid = 1' }
+      - { regexp: '^net.ipv4.ip_local_port_range', line: 'net.ipv4.ip_local_port_range = 9000 65500' }
+      - { regexp: '^net.ipv4.tcp_syncookies', line: 'net.ipv4.tcp_syncookies = 1' }
+      - { regexp: '^net.ipv4.conf.all.accept_redirects', line: 'net.ipv4.conf.all.accept_redirects = 0' }
+      - { regexp: '^net.ipv4.conf.all.rp_filter', line: 'net.ipv4.conf.all.rp_filter = 1' }
+      - { regexp: '^net.ipv4.icmp_echo_ignore_broadcasts', line: 'net.ipv4.icmp_echo_ignore_broadcasts = 1' }
+      - { regexp: '^net.ipv4.icmp_ignore_bogus_error_responses', line: 'net.ipv4.icmp_ignore_bogus_error_responses = 1' }
+      - { regexp: '^net.ipv4.tcp_fin_timeout', line: 'net.ipv4.tcp_fin_timeout = 30' }
+      - { regexp: '^net.ipv4.tcp_keepalive_time', line: 'net.ipv4.tcp_keepalive_time = 1800' }
+      - { regexp: '^net.ipv4.tcp_sack', line: 'net.ipv4.tcp_sack = 0' }
+      - { regexp: '^net.ipv4.tcp_timestamps', line: 'net.ipv4.tcp_timestamps = 0' }
+      - { regexp: '^net.ipv4.tcp_window_scaling', line: 'net.ipv4.tcp_window_scaling = 0' }
+      - { regexp: '^kernel.sem', line: 'kernel.sem = 250 32000 100 128' }
+      - { regexp: '^net.core.rmem_default', line: 'net.core.rmem_default = 262144' }
+      - { regexp: '^net.core.wmem_default', line: 'net.core.wmem_default = 262144' }
+      - { regexp: '^net.core.rmem_max', line: 'net.core.rmem_max = 4194304' }
+      - { regexp: '^net.core.wmem_max', line: 'net.core.wmem_max = 1048576' }
+      - { regexp: '^fs.aio-max-nr', line: 'fs.aio-max-nr = 1048576' }
+      - { regexp: '^vm.swappiness', line: 'vm.swappiness = 1' }
+      - { regexp: '^vm.dirty_background_ratio ', line: 'vm.dirty_background_ratio  = 3' }
+      - { regexp: '^vm.dirty_ratio', line: 'vm.dirty_ratio = 80' }
+      - { regexp: '^vm.dirty_expire_centisecs', line: 'vm.dirty_expire_centisecs = 500' }
+      - { regexp: '^vm.dirty_writeback_centisecs', line: 'vm.dirty_writeback_centisecs = 100' }
+
+  - name: Assign values to User Grid
+    pam_limits:
+      domain: grid
+      limit_type: "{{item.type}}"
+      limit_item: "{{item.key}}"
+      value: "{{item.value}}"
+    loop:
+      - {"type":soft, "key":nofile, "value": 1024}
+      - {"type":hard, "key":nofile, "value": 65536}
+      - {"type":soft, "key":nproc, "value": 2047}
+      - {"type":hard, "key":nproc, "value": 16384}
+      - {"type":soft, "key":stack, "value": 10240}
+      - {"type":hard, "key":stack, "value": 32768}
+      - {"type":hard, "key":memlock, "value": 60397977}
+      - {"type":hard, "key":memlock, "value": 60397977}
+
+  - name: Assign values to User Oracle
+    pam_limits:
+      domain: oracle
+      limit_type: "{{item.type}}"
+      limit_item: "{{item.key}}"
+      value: "{{item.value}}"
+    loop: 
+      - {"type":soft, "key":nofile, "value": 1024}
+      - {"type":hard, "key":nofile, "value": 65536}
+      - {"type":soft, "key":nproc, "value": 2047}
+      - {"type":hard, "key":nproc, "value": 16384}
+      - {"type":soft, "key":stack, "value": 10240}
+      - {"type":hard, "key":stack, "value": 32768}
+      - {"type":hard, "key":memlock, "value": 60397977}
+      - {"type":hard, "key":memlock, "value": 60397977}
+
+  - name: Assign values to User Grid in 99-grid-oracle-limits.conf file
+    pam_limits:
+      domain: grid
+      dest: /etc/security/limits.d/99-grid-oracle-limits.conf
+      limit_type: "{{item.type}}"
+      limit_item: "{{item.key}}"
+      value: "{{item.value}}"
+    loop: 
+      - {"type":soft, "key":nofile, "value": 1024}
+      - {"type":hard, "key":nofile, "value": 65536}
+      - {"type":soft, "key":nproc, "value": 16384}
+      - {"type":hard, "key":nproc, "value": 16384}
+      - {"type":soft, "key":stack, "value": 10240}
+      - {"type":hard, "key":stack, "value": 32768}
+
+  - name: Assign values to User Oracle in 99-grid-oracle-limits.conf file
+    pam_limits:
+      domain: oracle
+      dest: /etc/security/limits.d/99-grid-oracle-limits.conf
+      limit_type: "{{item.type}}"
+      limit_item: "{{item.key}}"
+      value: "{{item.value}}"
+    loop: 
+      - {"type":soft, "key":nofile, "value": 1024}
+      - {"type":hard, "key":nofile, "value": 65536}
+      - {"type":soft, "key":nproc, "value": 16384}
+      - {"type":hard, "key":nproc, "value": 16384}
+      - {"type":soft, "key":stack, "value": 10240}
+      - {"type":hard, "key":stack, "value": 32768}
+
+  - name: Update Profile for ULIMIT 
+    lineinfile:
+      path: /etc/profile
+      state: present
+      line: "{{ item }}"
+    with_items:
+    - 'if [ \$USER == "oracle" ] || [ \$USER == "grid" ]; then'
+    - '        if [ $SHELL = "/bin/ksh" ]; then'
+    - '              ulimit -p 16384'
+    - '              ulimit -n 65536'
+    - '        else'
+    - '              ulimit -u 16384 -n 65536'
+    - '        fi'
+    - 'umask 022'
+    - 'fi'
+  - name: Update Oracle Grid Profile
+    lineinfile:
+      path: /etc/profile.d/oracle-grid.sh
+      state: present
+      line: "{{ item }}"
+    with_items:
+    - 'if [ \$USER == "oracle" ] || [ \$USER == "grid" ]; then'
+    - '        if [ $SHELL = "/bin/ksh" ]; then'
+    - '              ulimit -p 16384'
+    - '              ulimit -n 65536'
+    - '        else'
+    - '              ulimit -u 16384 -n 65536'
+    - '        fi'
+    - 'umask 022'
+    - 'fi'
+  - name: Update hosts
+    lineinfile:
+      path: /etc/csh.login
+      state: present
+      line: "{{ item }}"
+    with_items:
+    - 'if ( \$USER == "oracle" || \$USER == "grid" ) then'
+    - '        limit maxproc 16384'
+    - '        limit descriptors 65536'
+    - '	umask 022'
+    - 'endif'
+
+  - name: Disable SELinux
+    selinux:
+      state: disabled
+
+  - name: Disable ZeroConfig
+    shell: echo "NOZEROCONF=yes" >> /etc/sysconfig/network
+  
+  - name: create directory if they don't exist
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0775
+    loop:
+      - /opt/app/oraInventory/
+      - /opt/app/oraOEM/
+      - /opt/app/grid/
+      - /opt/app/grid/oragi
+      - /opt/app/grid/12.1.0.2
+      - /opt/app/grid/19.0.0.0
+      - /opt/app/oracle/
+      - /opt/app/oracle/product
+      - /opt/app/oracle/product/12.1.0.2
+      - /opt/app/oracle/product/12.1.0.2/db_home
+      - /opt/app/oracle/product/19.0.0.0
+      - /opt/app/oracle/product/19.0.0.0/db_home
+
+  - name: task for creating logical volume
+    lvol:
+      vg: vg0
+      lv:  lvoracle
+      size: 50g
+      force: yes
+
+  - name: format the xfs filesystem
+    filesystem:
+      fstype: xfs
+      dev: /dev/vg0/lvoracle
+
+  - name: mount the lv on /data1
+    mount:
+      path: /opt/app/oracle
+      src: /dev/vg0/lvoracle
+      fstype: xfs
+      state: mounted
+
+  - name: task for creating logical volume
+    lvol:
+      vg: vg0
+      lv:  lvoraOEM
+      size: 4g
+      force: yes
+
+  - name: format the xfs filesystem
+    filesystem:
+      fstype: xfs
+      dev: /dev/vg0/lvoraOEM
+
+  - name: mount the lv on /data1
+    mount:
+      path: /opt/app/oraOEM
+      src: /dev/vg0/lvoraOEM
+      fstype: xfs
+      state: mounted
+
+  - name: task for creating logical volume
+    lvol:
+      vg: vg0
+      lv:  lvgrid
+      size: 50g
+      force: yes
+
+  - name: format the xfs filesystem
+    filesystem:
+      fstype: xfs
+      dev: /dev/vg0/lvgrid
+
+  - name: mount the lv on /data1
+    mount:
+      path: /opt/app/grid
+      src: /dev/vg0/lvgrid
+      fstype: xfs
+      state: mounted
+
+  - name: Change permissions on Grid folders 
+    file:
+      dest: "{{ item }}"
+      recurse: true
+      owner: grid
+      group: oinstall
+      mode: "0775"
+    loop:
+      - /opt/app/oraInventory
+      - /opt/app/grid
+
+  - name: Change permissions on Oracle Folders
+    file:
+      dest: "{{ item }}"
+      recurse: true
+      owner: oracle
+      group: oinstall
+      mode: "0775"
+    loop:
+      - /opt/app/oracle
+      - /opt/app/oraOEM
+
+  - name: Update rc.lcoal file to start IPMI in boot
+    lineinfile:
+      path: /etc/rc.local
+      state: present
+      line: "{{ item }}"
+    with_items:
+    - 'modprobe ipmi_msghandler'
+    - 'modprobe ipmi_si'
+    - 'modprobe ipmi_devintf'
+  - name: Install X11 Packages
+    shell: yum install xorg* -y
+
+  - name: Grant SSH Access to Infrastructure team and DB Team
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      state: present
+      line: "AllowGroups     root {{group_name}}"
+      
+  - name: Grant Sudo permissions to DB/Apps Team Team
+    lineinfile:
+      path: /etc/sudoers
+      state: present
+      line: "{{group_name}} ALL=(ALL)       NOPASSWD: ALL"
+
+
+
+
+
+
+
+
+
+
+  
+
+      
+
+    
+      
+
+
+  

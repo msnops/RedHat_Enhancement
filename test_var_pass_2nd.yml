@@ -1,0 +1,23 @@
+---
+- name: testing variable passing to another playbook in work flow 
+  vars:
+    file_location: /tmp/xvat_test
+  hosts: xvat_test_app
+  tasks:
+    - name: get the date
+      shell: date -d"1 month ago" "+%Y%m"
+      register: last_month
+
+    - name: list files
+      find:
+        paths: "{{ file_location }}/customer.in/"
+        patterns: '*{{ last_month.stdout }}*.txt,*{{ last_month.stdout }}*.txt.DONE'
+      register: filein
+ 
+    - name: wait for filed to go away
+      wait_for:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ filein.files }}"
+
+        

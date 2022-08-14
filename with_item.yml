@@ -1,0 +1,16 @@
+---
+- name: testing with items
+  hosts: soa_uat
+  tasks:
+    - name: check the ldom status
+      shell: "cat {{ item }} | awk '{print $2}'"
+      register: status_ldom
+      with_items:
+        - "{{ file_list.split('\n') }}"
+    - debug: msg={{ item.stdout }}
+      with_items: "{{ status_ldom.results }}"
+
+    - name: change the bound to active
+      shell: sed -i 's/bound/active/g' {{ item.item }}
+      with_items: "{{ status_ldom.results }}"
+      when: item.stdout == 'bound'

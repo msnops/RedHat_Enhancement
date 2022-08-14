@@ -1,0 +1,48 @@
+---
+  - name: Checking if running RedHat/CentOS
+    fail:
+      msg: The system is not running RedHat/CentOS, aborting
+    when: ansible_facts['os_family'] != 'RedHat'
+
+  - name: Checking if packages required to join AD realm are present
+    yum: name={{ pkgs }} state=present update_cache=yes
+
+  - name: Joinining the AD realm (creating AD computer account and updating /etc/krb5.keytab)
+    shell: echo '{{ ad_password }}' | realm join  --computer-ou="{{ Join_OU }}" -U {{ ad_username }} {{ AD_Domain }}
+
+  - name: Configuring sssd.conf
+    template:
+      src: sssd.j2
+      dest: /etc/sssd/sssd.conf
+      owner: root
+      group: root
+      mode: 0600
+
+  - name: Configuring krb5.conf
+    template:
+      src: krb5.j2
+      dest: /etc/krb5.conf
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Configuring PAM/SSHD to use SSSD
+    shell: authselect select sssd with-mkhomedir --force
+
+  - name: Enabling oddjobd service
+    systemd:
+      name: oddjobd.service
+      enabled: yes
+      state: started
+
+  - name: Restarting SSSD
+    systemd:
+      name: sssd
+      enabled: yes
+      state: restarted
+
+  - name: Grant Admin Privillages to Infrastructure team
+    lineinfile:
+      path: /etc/sudoers
+      state: present
+      line: "{{group_name}} ALL=(ALL)       NOPASSWD: ALL"

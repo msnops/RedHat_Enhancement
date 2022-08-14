@@ -1,0 +1,13 @@
+---
+  - name: testing multi playbook
+    hosts: localhost
+    gather_facts: False
+    connection: local
+    tasks:
+      - name: print echo
+        debug:
+          msg: "{{item.username}} is okay"
+        with_items: "{{user_details }}"
+      - name: call another playbook
+        include: files/test_playbook1.yml
+        when: vpn_required |bool == true
